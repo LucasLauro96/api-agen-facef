@@ -33,6 +33,7 @@ class AgendamentoController extends Controller
 
         $startTime = Carbon::parse($request->startedAt);
         $endTime = Carbon::parse($request->finishedAt);
+        $today = date('Y-m-d H:i:s', strtotime('-3 hour'));
 
         if($endTime <= $startTime){
             return response(json_encode(
@@ -41,7 +42,14 @@ class AgendamentoController extends Controller
                     'status' => 403
                 )
             ), 403);
-        }  
+        } else if ($startTime < $today){
+            return response(json_encode(
+                array(
+                    'message' => 'A data do agendamento tem que ser maior que agora!',
+                    'status' => 403
+                )
+            ), 403);
+        } 
         
         //Define a quantidade de horas;
         $totalHours = $endTime->diffInHours($startTime);
@@ -49,24 +57,19 @@ class AgendamentoController extends Controller
             $totalHours = 1;
         }
         //Define o valor do aluguel;
-        $amount = $totalHours * 80;
-        
-         
-        //Verifica se já existe um aluguel nesse horario; 
-        $startTimeVerify =  Carbon::parse($request->startedAt)->addMinutes(3);
-        $endTimeVerify =  Carbon::parse($request->finishedAt)->subMinutes(3);
+        $amount = $totalHours * 80; 
 
         $data = DB::table('scheduler')->select()
-        ->where(function ($query) use ($startTime, $startTimeVerify) {
+        ->where(function ($query) use ($startTime) {
             $query->where('startedAt', '<=', $startTime)
-                  ->Where('finishedAt', '>=', $startTimeVerify);
+                  ->Where('finishedAt', '>=', $startTime);
         })
-        ->orwhere(function ($query) use ($endTime, $endTimeVerify) {
+        ->orwhere(function ($query) use ($endTime) {
             $query->where('startedAt', '<=', $endTime)
-                  ->where('finishedAt', '>=', $endTimeVerify);
+                  ->where('finishedAt', '>=', $endTime);
         })
         ->count('id');
-        
+
         if($data != 0){
             return response(json_encode(
                 array(
@@ -93,9 +96,15 @@ class AgendamentoController extends Controller
             }
 
             return response($agendamento, 200);
+
         } catch (\Exception $e) {
             DB::rollback();
-            return response($e, 500);;
+            return response(json_encode(
+                array(
+                    'message' => 'Ocorreu um erro: '. $e->getMessage(),
+                    'status' => 500
+                )
+            ), 500);
         }
 
     }
