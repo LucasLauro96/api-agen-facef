@@ -9,7 +9,13 @@ class AgendamentoModel extends Model
 {
     use HasFactory;
 
-    protected $table = 'agendamento';
+    protected $table = 'scheduler';
     protected $primaryKey = 'id';
-    protected $fillable = ['quadra_id', 'usuario_id', 'data_hora'];
+    public $timestamps = false;
+    protected $fillable = [
+        'userId',
+        'startedAt',
+        'finishedAt',
+        'amount',
+    ];
 }
